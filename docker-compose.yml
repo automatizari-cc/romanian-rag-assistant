@@ -170,9 +170,15 @@ services:
     ports:
       - "${NGINX_HTTP_PORT}:80"
       - "${NGINX_HTTPS_PORT}:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+      # Only substitute ${DOMAIN} in templates; keep all $nginx_vars literal.
+      NGINX_ENVSUBST_FILTER: "^DOMAIN$$"
+      NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx/dynamic-conf.d
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/templates:/etc/nginx/templates:ro
       - ./nginx/certs:/etc/nginx/certs:ro
       - ./nginx/cf-origin-pull-ca.pem:/etc/nginx/cf-origin-pull-ca.pem:ro
       - ./nginx/html:/usr/share/nginx/html:ro
