@@ -1,0 +1,196 @@
+name: romanian-rag
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-restart: &default-restart
+  restart: unless-stopped
+
+services:
+
+  qdrant:
+    image: qdrant/qdrant:v1.12.4
+    <<: *default-restart
+    logging: *default-logging
+    ports:
+      - "${BIND_LOCAL}:6333:6333"
+    volumes:
+      - qdrant-storage:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/6333' || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    networks: [internal]
+
+  ollama:
+    image: ollama/ollama:0.4.7
+    <<: *default-restart
+    logging: *default-logging
+    ports:
+      - "${BIND_LOCAL}:11434:11434"
+    environment:
+      OLLAMA_KEEP_ALIVE: "${OLLAMA_KEEP_ALIVE}"
+      OLLAMA_NUM_PARALLEL: "1"
+      OLLAMA_MAX_LOADED_MODELS: "1"
+    volumes:
+      - ollama-models:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks: [internal]
+
+  tei-embed:
+    image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.5
+    <<: *default-restart
+    logging: *default-logging
+    ports:
+      - "${BIND_LOCAL}:8081:80"
+    command:
+      - --model-id=${EMBED_MODEL}
+      - --max-batch-tokens=${EMBED_MAX_BATCH_TOKENS}
+      - --pooling=cls
+    volumes:
+      - tei-embed-cache:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/health >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
+    networks: [internal]
+
+  tei-rerank:
+    image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.5
+    <<: *default-restart
+    logging: *default-logging
+    ports:
+      - "${BIND_LOCAL}:8082:80"
+    command:
+      - --model-id=${RERANK_MODEL}
+      - --max-batch-tokens=${RERANK_MAX_BATCH_TOKENS}
+    volumes:
+      - tei-rerank-cache:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/health >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
+    networks: [internal]
+
+  ingestion:
+    build:
+      context: ./ingestion
+      dockerfile: Dockerfile
+    <<: *default-restart
+    logging: *default-logging
+    ports:
+      - "${BIND_LOCAL}:8000:8000"
+    environment:
+      QDRANT_URL: http://qdrant:6333
+      QDRANT_COLLECTION: ${QDRANT_COLLECTION}
+      QDRANT_VECTOR_SIZE: ${QDRANT_VECTOR_SIZE}
+      QDRANT_DISTANCE: ${QDRANT_DISTANCE}
+      EMBED_URL: http://tei-embed:80
+      RERANK_URL: http://tei-rerank:80
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL}
+      OLLAMA_NUM_CTX: ${OLLAMA_NUM_CTX}
+      INGEST_CHUNK_TOKENS: ${INGEST_CHUNK_TOKENS}
+      INGEST_CHUNK_OVERLAP: ${INGEST_CHUNK_OVERLAP}
+      INGEST_TOP_K: ${INGEST_TOP_K}
+      INGEST_TOP_N: ${INGEST_TOP_N}
+      INGEST_SYSTEM_PROMPT_RO: ${INGEST_SYSTEM_PROMPT_RO}
+    volumes:
+      - uploads:/uploads
+    depends_on:
+      qdrant: {condition: service_healthy}
+      tei-embed: {condition: service_healthy}
+      tei-rerank: {condition: service_healthy}
+      ollama: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8000/health >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks: [internal]
+
+  postgres:
+    image: postgres:16-alpine
+    <<: *default-restart
+    logging: *default-logging
+    ports:
+      - "${BIND_LOCAL}:5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    networks: [internal]
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:0.5.4
+    <<: *default-restart
+    logging: *default-logging
+    ports:
+      - "${BIND_LOCAL}:8080:8080"
+    environment:
+      WEBUI_SECRET_KEY: ${WEBUI_SECRET_KEY}
+      WEBUI_AUTH: ${WEBUI_AUTH}
+      ENABLE_SIGNUP: ${ENABLE_SIGNUP}
+      DEFAULT_USER_ROLE: ${DEFAULT_USER_ROLE}
+      WEBUI_NAME: ${WEBUI_NAME}
+      OPENAI_API_BASE_URL: ${OPENAI_API_BASE_URL}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ENABLE_OLLAMA_API: "false"
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    depends_on:
+      postgres: {condition: service_healthy}
+      ingestion: {condition: service_healthy}
+    networks: [internal]
+
+  nginx:
+    image: nginx:1.27-alpine
+    <<: *default-restart
+    logging: *default-logging
+    ports:
+      - "${NGINX_HTTP_PORT}:80"
+      - "${NGINX_HTTPS_PORT}:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+      - ./nginx/cf-origin-pull-ca.pem:/etc/nginx/cf-origin-pull-ca.pem:ro
+      - ./nginx/logs:/var/log/nginx
+    depends_on:
+      open-webui: {condition: service_started}
+    networks: [internal]
+
+networks:
+  internal:
+    driver: bridge
+    enable_ipv6: false
+    driver_opts:
+      com.docker.network.bridge.enable_ip_masquerade: "true"
+
+volumes:
+  qdrant-storage:
+  ollama-models:
+  tei-embed-cache:
+  tei-rerank-cache:
+  postgres-data:
+  uploads:

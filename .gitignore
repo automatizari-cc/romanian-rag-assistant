@@ -216,3 +216,21 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# romanian-rag-assistant — runtime artefacts that must never be committed
+.env
+.env.*
+!.env.example
+nginx/certs/
+nginx/cf-origin-pull-ca.pem
+nginx/logs/
+data/
+uploads/*
+!uploads/.gitkeep
+qdrant/storage/
+ollama/models/
+*.pem
+*.key
+*.crt
+!**/test/**/*.pem
+
