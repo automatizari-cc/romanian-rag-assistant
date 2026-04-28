@@ -17,11 +17,9 @@ updates:
       interval: weekly
       day: monday
 
-  - package-ecosystem: docker
-    directory: /
-    schedule:
-      interval: weekly
-      day: monday
+  # NOTE: Dependabot's "docker" ecosystem reads Dockerfiles, not docker-compose.yml,
+  # so no root-level entry. Compose images (qdrant, ollama, postgres, nginx, tei,
+  # open-webui) are pinned by tag and bumped manually for now.
 
   - package-ecosystem: github-actions
     directory: /

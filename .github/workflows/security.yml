@@ -66,13 +66,16 @@ jobs:
         with:
           dockerfile: ingestion/Dockerfile
           failure-threshold: warning
+          # DL3008/DL3009: pinning apt package versions on debian-slim is impractical
+          # (versions move with point releases); we accept the rolling update model.
+          ignore: DL3008,DL3009
 
   trivy-fs:
     name: trivy fs (vulns + secrets)
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - uses: aquasecurity/trivy-action@0.28.0
+      - uses: aquasecurity/trivy-action@master
         with:
           scan-type: fs
           scan-ref: .
@@ -93,7 +96,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - uses: aquasecurity/trivy-action@0.28.0
+      - uses: aquasecurity/trivy-action@master
         with:
           scan-type: config
           scan-ref: .
@@ -114,6 +117,7 @@ jobs:
       image: semgrep/semgrep
     steps:
       - uses: actions/checkout@v4
-      - run: semgrep ci --config p/python --config p/security-audit --config p/owasp-top-ten --config p/dockerfile --error
+      # semgrep ci already exits non-zero on findings; --error was removed in newer versions
+      - run: semgrep ci --config p/python --config p/security-audit --config p/owasp-top-ten --config p/dockerfile
         env:
           SEMGREP_RULES: p/python p/security-audit p/owasp-top-ten p/dockerfile
