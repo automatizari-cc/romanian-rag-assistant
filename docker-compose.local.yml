@@ -1,0 +1,45 @@
+# Local-development override.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.local.yml up -d
+#
+# What this gives you:
+# - Skips `ollama` and `nginx` (both marked `profiles: [prod]` in the base
+#   compose, so they don't start unless `--profile prod` is passed).
+# - Wires the `ingestion` container to talk to your *host's* Ollama via
+#   host.docker.internal:11434 instead of an in-compose ollama service.
+# - Drops the ingestion → ollama dependency so docker compose doesn't wait
+#   for a service that isn't running.
+# - You access Open-WebUI directly at http://localhost:8080 (no nginx, no
+#   custom landing/login). Open-WebUI's own auth still works.
+#
+# Prerequisite — your host's Ollama must listen on 0.0.0.0, not just 127.0.0.1.
+# Default systemd install binds to 127.0.0.1:11434, which the container
+# can't reach. Fix once with:
+#
+#   sudo systemctl edit ollama.service
+#   # add these two lines, save, exit:
+#   [Service]
+#   Environment="OLLAMA_HOST=0.0.0.0:11434"
+#
+#   sudo systemctl daemon-reload
+#   sudo systemctl restart ollama
+#   ollama --version  # quick sanity check; service should be back up
+#
+# Then in `.env` set `OLLAMA_MODEL` to one of the tags you actually have
+# (run `ollama list`), e.g. OLLAMA_MODEL=gemma4:e4b
+
+services:
+
+  ingestion:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      OLLAMA_URL: http://host.docker.internal:11434
+    depends_on: !override
+      qdrant:
+        condition: service_healthy
+      tei-embed:
+        condition: service_healthy
+      tei-rerank:
+        condition: service_healthy

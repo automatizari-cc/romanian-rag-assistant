@@ -23,19 +23,30 @@ Full service map and request flow: **[ARCHITECTURE.md](./ARCHITECTURE.md)**.
 
 ---
 
-## Quickstart (local dev)
+## Quickstart (local dev — uses your host's Ollama)
 
 ```bash
+# 1. Make your host's Ollama reachable from containers (one-time):
+sudo systemctl edit ollama.service
+# add:
+#   [Service]
+#   Environment="OLLAMA_HOST=0.0.0.0:11434"
+sudo systemctl daemon-reload && sudo systemctl restart ollama
+
+# 2. Configure and run:
 cp .env.example .env
-# edit .env — fill DOMAIN, LE_EMAIL, CLOUDFLARE_*, generate secrets:
+# edit .env: set OLLAMA_MODEL to a tag from `ollama list`,
+# generate WEBUI_SECRET_KEY and POSTGRES_PASSWORD,
+# leave DOMAIN / LE_EMAIL / CLOUDFLARE_* blank.
 #   openssl rand -hex 32   # WEBUI_SECRET_KEY
 #   openssl rand -hex 24   # POSTGRES_PASSWORD
 
-docker compose up -d
-./scripts/bootstrap.sh         # pulls RoLlama3.1 GGUF, warms TEI caches
+docker compose -f docker-compose.yml -f docker-compose.local.yml up -d
+# first boot pulls BGE-M3 + reranker (~4 GB) — wait a few minutes
+# then open http://localhost:8080
 ```
 
-For local development without TLS, hit Open-WebUI directly on `127.0.0.1:8080`. nginx is meant for the production deploy where it terminates TLS and verifies Cloudflare's client cert.
+The local override skips nginx/TLS and the in-compose Ollama — `ingestion` talks to your host's Ollama directly. No custom landing page in this mode; you log into Open-WebUI's own UI.
 
 ---
 
@@ -57,7 +68,7 @@ cp .env.example .env && $EDITOR .env
 ./scripts/sync-cloudflare-ips.sh                 # also schedule via cron, daily
 ./scripts/setup-fail2ban.sh                      # SSH brute-force protection
 
-docker compose up -d
+docker compose --profile prod up -d
 ./scripts/bootstrap.sh
 ```
 

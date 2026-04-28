@@ -64,7 +64,7 @@ Repo Settings still TODO (manual UI work for the user):
 
 Highest leverage first:
 
-1. **Local-mode override** (user has a bigger local server with Ollama + 2 unspecified models). Plan was a `docker-compose.local.yml` that strips nginx-with-TLS, removes our `ollama` service, points `ingestion` at host's Ollama via `host.docker.internal`. **Not started.** Pending the user telling us *which* two models they have so we can recommend whether to also pull RoLlama3.1 locally.
+1. **Local-mode override — DONE this session.** `docker-compose.local.yml` is committed; user's host has `mistral:7b-instruct` (poor Romanian) and `gemma4:e4b` (likely best of the two). Default `OLLAMA_MODEL` for local is **`gemma4:e4b`**. RoLlama3.1 attempted but blocked — see "Things to watch" below.
 2. **Deploy automation on the production VM** (architecture agreed but not coded):
    - `scripts/deploy.sh` — idempotent: git fetch → compare HEADs → reset hard → `compose pull` + `up -d --build` → `compose ps` → log SHA. Skip rebuild when no Dockerfile-relevant files changed; abort on uncommitted server-side changes.
    - `scripts/install-deploy-timer.sh` — installs `rag-deploy.service` + `rag-deploy.timer`, every 2 min.
@@ -118,9 +118,15 @@ Highest leverage first:
 
 ## Things to watch (technical debt / known caveats)
 
+- **RoLlama3.1 GGUF cannot currently be pulled into Ollama** (verified 2026-04-28 against Ollama 0.x.x and the freshly upgraded latest):
+  - `ollama pull hf.co/OpenLLM-Ro/RoLlama3.1-8b-Instruct-GGUF:Q4_K_M` → `realm host "huggingface.co" does not match original host "hf.co"` (known Ollama bug with the `hf.co` shortcut and HF redirects).
+  - `ollama pull huggingface.co/OpenLLM-Ro/RoLlama3.1-8b-Instruct-GGUF:Q4_K_M` → `401: Invalid username or password.` (the GGUF repo at this exact path appears not to exist or is gated; the FP16 repo `OpenLLM-Ro/RoLlama3.1-8b-Instruct` is open but Ollama needs GGUF).
+  - **Status:** unresolved. `scripts/bootstrap.sh` references `OpenLLM-Ro/RoLlama3.1-8b-Instruct-GGUF` and will fail on the production VM until either (a) Ollama upstream fixes the redirect handling for this repo, (b) we find a community GGUF mirror with the right tag, or (c) we switch to a manual `Modelfile` flow that downloads the GGUF from HF directly. **Action item for next session:** verify what GGUFs are actually available for RoLlama3.1, possibly under a different uploader (e.g. bartowski, `mradermacher`).
+  - **Workaround in production deploy:** keep `gemma4:e4b` (or another locally-available model) as a temporary `OLLAMA_MODEL` value while RoLlama3.1 access is being figured out.
+- **Local-dev mode is wired and working.** `docker-compose.local.yml` is the override; it skips `ollama` and `nginx` (both `profiles: [prod]` in the base compose) and points `ingestion` at the host's Ollama via `host.docker.internal:11434`. Requires the host's Ollama to listen on `0.0.0.0:11434` (default install binds 127.0.0.1, has to be edited via `systemctl edit ollama.service`). `gemma4:e4b` is the working default for the user's local box.
+- **Production runbook now requires `--profile prod`** on every `docker compose` command (since adding the profile to ollama+nginx). README and ARCHITECTURE.md updated accordingly.
 - **Single-worker assumption.** `ingestion/app/auth.py` rate limiter is in-memory per-process. Compose runs uvicorn with `--workers 1`. If we ever scale to >1 worker, the limiter must move to Redis.
 - **`trivy-action@master`** in `.github/workflows/security.yml`. Not pinned to SHA. Dependabot may move it to a version once a release exists; until then, accept the supply-chain risk for simplicity.
-- **`ollama pull` of RoLlama3.1 from HF** in `scripts/bootstrap.sh` — depends on the GGUF being available at `OpenLLM-Ro/RoLlama3.1-8b-Instruct-GGUF`. Verified at session time; re-check if pull fails.
 - **Open-WebUI is pinned to 0.5.4.** Newer versions may change the `/api/v1/auths/signin` contract or cookie name (`token`); our auth proxy depends on both.
 - **Custom landing always shows at `/`.** Already-logged-in users see the landing page (with a JS-detected "Continue" button) rather than being auto-forwarded into Open-WebUI. This was a deliberate simplification — sub-path mounting Open-WebUI is fragile.
 
