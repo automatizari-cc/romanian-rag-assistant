@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ro">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Autentificare &middot; Asistent RAG</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body class="page-login">
+  <main class="card">
+    <h1>Autentificare</h1>
+    <form id="login-form" novalidate autocomplete="on">
+      <label for="email">E-mail</label>
+      <input
+        id="email"
+        name="email"
+        type="email"
+        required
+        maxlength="254"
+        minlength="3"
+        autocomplete="username"
+        autocapitalize="off"
+        autocorrect="off"
+        spellcheck="false"
+        inputmode="email"
+        placeholder="nume@exemplu.ro"
+      >
+      <p class="field-error" id="err-email" hidden></p>
+
+      <label for="password">Parolă</label>
+      <input
+        id="password"
+        name="password"
+        type="password"
+        required
+        minlength="8"
+        maxlength="256"
+        autocomplete="current-password"
+      >
+      <p class="field-error" id="err-password" hidden></p>
+
+      <button id="submit" class="btn btn-primary" type="submit">Intră în cont</button>
+      <p class="form-error" id="form-error" hidden></p>
+    </form>
+    <p class="muted"><a href="/">&larr; Înapoi</a></p>
+  </main>
+  <script src="/static/login.js" defer></script>
+</body>
+</html>

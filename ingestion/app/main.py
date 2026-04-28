@@ -10,6 +10,7 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
+from .auth import router as auth_router
 from .chunking import chunk_text
 from .config import settings
 from .embed import embed_batch
@@ -26,11 +27,15 @@ _FILENAME_OK = re.compile(r"[^A-Za-z0-9._-]+")
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    await ensure_collection()
+    try:
+        await ensure_collection()
+    except Exception as e:
+        log.warning("qdrant not reachable at startup: %s; will retry lazily", e)
     yield
 
 
 app = FastAPI(title="romanian-rag ingestion", lifespan=lifespan)
+app.include_router(auth_router)
 
 
 @app.get("/health")
@@ -78,6 +83,7 @@ async def ingest(file: Annotated[UploadFile, File(...)]) -> IngestResponse:
     if not all_chunks:
         raise HTTPException(status_code=422, detail="no text extracted")
 
+    await ensure_collection()
     vectors = await embed_batch(all_chunks)
     upserted = await upsert_chunks(vectors, payloads)
     log.info("ingested %s mime=%s chunks=%d", filename, mime, upserted)

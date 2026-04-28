@@ -175,6 +175,7 @@ services:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - ./nginx/certs:/etc/nginx/certs:ro
       - ./nginx/cf-origin-pull-ca.pem:/etc/nginx/cf-origin-pull-ca.pem:ro
+      - ./nginx/html:/usr/share/nginx/html:ro
       - ./nginx/logs:/var/log/nginx
     depends_on:
       open-webui: {condition: service_started}
