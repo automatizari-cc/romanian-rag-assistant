@@ -24,7 +24,7 @@ jobs:
     name: gitleaks (secrets)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - uses: gitleaks/gitleaks-action@v2
@@ -35,7 +35,7 @@ jobs:
     name: ruff + bandit
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -50,7 +50,7 @@ jobs:
     name: pip-audit (deps CVEs)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -61,7 +61,7 @@ jobs:
     name: hadolint (Dockerfiles)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: ingestion/Dockerfile
@@ -74,7 +74,7 @@ jobs:
     name: trivy fs (vulns + secrets)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: aquasecurity/trivy-action@master
         with:
           scan-type: fs
@@ -95,7 +95,7 @@ jobs:
     name: trivy config (compose + nginx)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: aquasecurity/trivy-action@master
         with:
           scan-type: config
@@ -116,7 +116,7 @@ jobs:
     container:
       image: semgrep/semgrep
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       # semgrep ci already exits non-zero on findings; --error was removed in newer versions
       - run: semgrep ci --config p/python --config p/security-audit --config p/owasp-top-ten --config p/dockerfile
         env:
