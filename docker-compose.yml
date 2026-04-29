@@ -186,6 +186,8 @@ services:
       - ./nginx/cf-origin-pull-ca.pem:/etc/nginx/cf-origin-pull-ca.pem:ro
       - ./nginx/html:/usr/share/nginx/html:ro
       - ./nginx/logs:/var/log/nginx
+    tmpfs:
+      - /etc/nginx/dynamic-conf.d
     depends_on:
       open-webui: {condition: service_started}
     networks: [internal]

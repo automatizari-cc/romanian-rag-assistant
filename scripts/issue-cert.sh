@@ -20,8 +20,8 @@ LE_DIR="$(pwd)/nginx/letsencrypt"
 mkdir -p "$CERTS_DIR" "$LE_DIR"
 
 CRED_FILE="$LE_DIR/cloudflare.ini"
-install -m 0400 /dev/null "$CRED_FILE"
-printf 'dns_cloudflare_api_token = %s\n' "$CLOUDFLARE_API_TOKEN" >"$CRED_FILE"
+rm -f "$CRED_FILE"
+( umask 077; printf 'dns_cloudflare_api_token = %s\n' "$CLOUDFLARE_API_TOKEN" >"$CRED_FILE" )
 
 echo "[cert] running certbot for $DOMAIN"
 docker run --rm \
