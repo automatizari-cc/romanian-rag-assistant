@@ -48,7 +48,7 @@ services:
     networks: [internal]
 
   tei-embed:
-    image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.5
+    image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.7
     <<: *default-restart
     logging: *default-logging
     ports:
@@ -68,7 +68,7 @@ services:
     networks: [internal]
 
   tei-rerank:
-    image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.5
+    image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.7
     <<: *default-restart
     logging: *default-logging
     ports:

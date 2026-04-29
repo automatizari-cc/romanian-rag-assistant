@@ -1,0 +1,64 @@
+# Silver-host override.
+#
+# silver = al's pre-AVX2 X5650 server (Westmere, 2010). The official TEI
+# `cpu-1.7` image SIGILLs on this CPU because its kernels assume AVX2.
+# This override replaces tei-embed and tei-rerank with a Python shim
+# (sentence-transformers + torch CPU 2.2.2) that exposes the same /embed
+# and /rerank HTTP contract ingestion.app.embed/rerank already speak.
+#
+# Prod path (Hetzner CX53, AMD EPYC) is untouched — it keeps using the real
+# TEI image via the base docker-compose.yml.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.silver.yml up -d --build
+#
+# Prerequisites on the host:
+# - Docker installed (silver: 29.4.1).
+# - Ollama installed and listening on 0.0.0.0:11434, with OLLAMA_MODEL pulled.
+#   (silver is headless so we install Ollama directly on the host instead of
+#   using the in-compose ollama service, mirroring docker-compose.local.yml.)
+
+services:
+
+  tei-embed:
+    image: tei-shim:latest
+    build:
+      context: ./tei-shim
+    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "80", "--workers", "1"]
+    environment:
+      MODE: embed
+      MODEL_ID: ${EMBED_MODEL}
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys;sys.exit(0 if urllib.request.urlopen('http://127.0.0.1/health').status==200 else 1)\" || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 600s
+
+  tei-rerank:
+    image: tei-shim:latest
+    build:
+      context: ./tei-shim
+    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "80", "--workers", "1"]
+    environment:
+      MODE: rerank
+      MODEL_ID: ${RERANK_MODEL}
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys;sys.exit(0 if urllib.request.urlopen('http://127.0.0.1/health').status==200 else 1)\" || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 600s
+
+  ingestion:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      OLLAMA_URL: http://host.docker.internal:11434
+    depends_on: !override
+      qdrant:
+        condition: service_healthy
+      tei-embed:
+        condition: service_healthy
+      tei-rerank:
+        condition: service_healthy
