@@ -1,5 +1,10 @@
 fastapi==0.115.4
 uvicorn[standard]==0.32.0
+# transformers >=4.49 added a torch.load gate (CVE-2025-32434) that requires
+# torch>=2.6. We're pinned to torch 2.2.2 for pre-AVX2 hosts (silver), so we
+# pin transformers below the gate. bge-m3 ships pytorch_model.bin which goes
+# through torch.load; bge-reranker-v2-m3 ships safetensors and is unaffected.
+transformers==4.45.2
 sentence-transformers==3.2.1
 numpy<2
 pydantic==2.9.2

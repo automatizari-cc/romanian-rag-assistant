@@ -102,6 +102,24 @@ class ChatCompletionRequest(BaseModel):
     temperature: float | None = None
 
 
+@app.get("/v1/models")
+async def list_models() -> dict:
+    # Open-WebUI fetches /v1/models to populate its dropdown. We expose only
+    # the configured backend model — the chat handler uses settings.OLLAMA_MODEL
+    # regardless of what the client sends, so listing more would mislead.
+    return {
+        "object": "list",
+        "data": [
+            {
+                "id": settings.OLLAMA_MODEL,
+                "object": "model",
+                "created": 0,
+                "owned_by": "ollama",
+            }
+        ],
+    }
+
+
 @app.post("/v1/chat/completions")
 async def chat_completions(req: ChatCompletionRequest):
     if not req.messages:

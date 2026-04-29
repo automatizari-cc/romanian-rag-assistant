@@ -117,7 +117,8 @@ services:
       tei-rerank: {condition: service_healthy}
       ollama: {condition: service_healthy}
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8000/health >/dev/null 2>&1 || exit 1"]
+      # ingestion image is python:3.12-slim — no wget. Use stdlib urllib.
+      test: ["CMD-SHELL", "python -c 'import urllib.request,sys; sys.exit(0 if urllib.request.urlopen(\"http://127.0.0.1:8000/health\").status==200 else 1)' || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 5
