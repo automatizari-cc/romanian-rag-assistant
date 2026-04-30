@@ -109,6 +109,8 @@ services:
       INGEST_TOP_K: ${INGEST_TOP_K}
       INGEST_TOP_N: ${INGEST_TOP_N}
       INGEST_SYSTEM_PROMPT_RO: ${INGEST_SYSTEM_PROMPT_RO}
+      WEBUI_SECRET_KEY: ${WEBUI_SECRET_KEY}
+      MAX_USER_UPLOAD_BYTES: ${MAX_USER_UPLOAD_BYTES:-26214400}
     volumes:
       - uploads:/uploads
     depends_on:

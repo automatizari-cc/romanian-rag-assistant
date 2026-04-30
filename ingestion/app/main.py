@@ -2,14 +2,18 @@ from __future__ import annotations
 
 import logging
 import re
+import shutil
+import uuid
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
+from .auth import current_user
 from .auth import router as auth_router
 from .chunking import chunk_text
 from .config import settings
@@ -17,12 +21,13 @@ from .embed import embed_batch
 from .llm import build_context_block, build_messages, new_completion_id, ollama_chat_stream, to_openai_chunk
 from .parsers import parse
 from .retrieval import retrieve
-from .store import ensure_collection, upsert_chunks
+from .store import delete_document, ensure_collection, list_documents, upsert_chunks
 
 log = logging.getLogger("ingestion")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 
 _FILENAME_OK = re.compile(r"[^A-Za-z0-9._-]+")
+_UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 
 
 @asynccontextmanager
@@ -118,6 +123,96 @@ async def list_models() -> dict:
             }
         ],
     }
+
+
+class KbUploadResponse(BaseModel):
+    doc_id: str
+    filename: str
+    mime: str
+    chunks: int
+    bytes: int
+    uploaded_at: str
+
+
+@app.post("/kb/upload", response_model=KbUploadResponse)
+async def kb_upload(
+    file: Annotated[UploadFile, File(...)],
+    user: Annotated[dict, Depends(current_user)],
+) -> KbUploadResponse:
+    data = await file.read()
+    if len(data) > settings.MAX_USER_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="file too large")
+    if not data:
+        raise HTTPException(status_code=400, detail="empty file")
+
+    filename = _safe_filename(file.filename or "upload")
+    try:
+        mime, pages = parse(filename, data)
+    except ValueError as e:
+        raise HTTPException(status_code=415, detail=str(e)) from e
+
+    doc_id = str(uuid.uuid4())
+    uploaded_at = datetime.now(UTC).isoformat()
+    uploader_id = str(user.get("id") or "unknown")
+
+    archive_dir = Path(settings.UPLOAD_DIR) / doc_id
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    (archive_dir / filename).write_bytes(data)
+
+    all_chunks: list[str] = []
+    payloads: list[dict] = []
+    for page_no, text in pages:
+        for c in chunk_text(text, settings.INGEST_CHUNK_TOKENS, settings.INGEST_CHUNK_OVERLAP):
+            all_chunks.append(c)
+            payloads.append({
+                "source": filename,
+                "filename": filename,
+                "page": page_no,
+                "text": c,
+                "doc_id": doc_id,
+                "uploaded_by": uploader_id,
+                "uploaded_at": uploaded_at,
+                "mime": mime,
+                "size_bytes": len(data),
+            })
+
+    if not all_chunks:
+        raise HTTPException(status_code=422, detail="no text extracted")
+
+    await ensure_collection()
+    vectors = await embed_batch(all_chunks)
+    upserted = await upsert_chunks(vectors, payloads)
+    log.info("kb upload doc_id=%s by=%s mime=%s chunks=%d", doc_id, uploader_id, mime, upserted)
+    return KbUploadResponse(
+        doc_id=doc_id,
+        filename=filename,
+        mime=mime,
+        chunks=upserted,
+        bytes=len(data),
+        uploaded_at=uploaded_at,
+    )
+
+
+@app.get("/kb/documents")
+async def kb_list(_user: Annotated[dict, Depends(current_user)]) -> dict:
+    docs = await list_documents()
+    return {"documents": docs}
+
+
+@app.delete("/kb/documents/{doc_id}")
+async def kb_delete(
+    doc_id: str,
+    _user: Annotated[dict, Depends(current_user)],
+) -> dict:
+    if not _UUID_RE.match(doc_id):
+        raise HTTPException(status_code=400, detail="invalid doc_id")
+    deleted = await delete_document(doc_id)
+    if deleted == 0:
+        raise HTTPException(status_code=404, detail="document not found")
+    archive_dir = Path(settings.UPLOAD_DIR) / doc_id
+    if archive_dir.exists():
+        shutil.rmtree(archive_dir, ignore_errors=True)
+    return {"doc_id": doc_id, "chunks_deleted": deleted}
 
 
 @app.post("/v1/chat/completions")

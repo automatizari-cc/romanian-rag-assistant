@@ -13,9 +13,12 @@ from collections import deque
 from threading import Lock
 
 import httpx
+import jwt
 from email_validator import EmailNotValidError, validate_email
 from fastapi import APIRouter, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field, field_validator
+
+from .config import settings
 
 # ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -155,3 +158,28 @@ def reset_rate_limiter() -> None:
     """Test helper — wipe the in-memory bucket."""
     with _rl_lock:
         _rl_buckets.clear()
+
+
+# ─── JWT verification (shared with Open-WebUI via WEBUI_SECRET_KEY) ──────────
+
+
+def verify_webui_jwt(token: str, secret: str) -> dict:
+    """Decode and verify an Open-WebUI JWT. Returns the claims dict.
+
+    Raises HTTPException(401) on any verification failure.
+    Raises HTTPException(500) if the secret is not configured.
+    """
+    if not secret:
+        raise HTTPException(status_code=500, detail="auth not configured")
+    if not token:
+        raise HTTPException(status_code=401, detail="auth required")
+    try:
+        return jwt.decode(token, secret, algorithms=["HS256"])
+    except jwt.PyJWTError as e:
+        raise HTTPException(status_code=401, detail="invalid token") from e
+
+
+def current_user(request: Request) -> dict:
+    """FastAPI dependency — returns the verified claims for the cookie token."""
+    token = request.cookies.get(COOKIE_NAME, "")
+    return verify_webui_jwt(token, settings.WEBUI_SECRET_KEY)

@@ -28,6 +28,10 @@ class Settings(BaseSettings):
 
     UPLOAD_DIR: str = "/uploads"
     MAX_UPLOAD_BYTES: int = 100 * 1024 * 1024
+    MAX_USER_UPLOAD_BYTES: int = 25 * 1024 * 1024
+
+    # Shared with Open-WebUI; used to verify JWTs on /kb/* endpoints.
+    WEBUI_SECRET_KEY: str = ""
 
 
 settings = Settings()

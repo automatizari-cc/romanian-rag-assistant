@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ro">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Documente &middot; Asistent RAG</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body class="page-upload">
+  <main class="card card-wide">
+    <h1>Documente</h1>
+    <p class="lede">Adaugă fișiere în baza de cunoștințe a asistentului.</p>
+
+    <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="Alege sau trage un fișier">
+      <p class="dz-title">Trage un fișier aici sau <span class="dz-link">apasă pentru a alege</span></p>
+      <p class="dz-hint">PDF, DOCX, TXT, MD sau HTML &middot; maxim 25 MB</p>
+      <input id="file" type="file" accept=".pdf,.docx,.txt,.md,.markdown,.html,.htm" hidden>
+    </div>
+
+    <p id="upload-status" class="form-error" hidden></p>
+
+    <h2 class="section-title">Fișiere existente</h2>
+    <div id="doc-list" class="doc-list" aria-live="polite">
+      <p class="muted" id="doc-empty">Se încarcă…</p>
+    </div>
+
+    <p class="muted"><a href="/">&larr; Înapoi la chat</a></p>
+  </main>
+  <script src="/static/upload.js" defer></script>
+</body>
+</html>
