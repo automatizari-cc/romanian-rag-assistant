@@ -91,7 +91,7 @@ def test_login_success_sets_token_cookie_and_returns_redirect(monkeypatch) -> No
     with TestClient(app) as c:
         r = c.post("/auth/login", json={"email": "user@example.ro", "password": "goodpass1"})
         assert r.status_code == 200
-        assert r.json() == {"redirect": "/c/"}
+        assert r.json() == {"redirect": "/", "token": "test-jwt-abc"}
         cookie = r.cookies.get("token")
         assert cookie == "test-jwt-abc"
         # Check Set-Cookie attributes

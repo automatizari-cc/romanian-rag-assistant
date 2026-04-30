@@ -88,6 +88,9 @@
       return r.json().then(function (body) { return { status: r.status, body: body }; });
     }).then(function (res) {
       if (res.status === 200 && res.body && res.body.redirect) {
+        if (res.body.token) {
+          try { localStorage.setItem("token", res.body.token); } catch (_) {}
+        }
         window.location.assign(res.body.redirect);
         return;
       }

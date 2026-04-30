@@ -143,7 +143,12 @@ async def login(payload: LoginIn, request: Request, response: Response) -> dict:
         samesite="strict",
         path="/",
     )
-    return {"redirect": "/c/"}
+    # Token is also returned in the body so login.js can seed localStorage —
+    # Open-WebUI's SPA reads localStorage.token to decide whether to render the
+    # chat UI or its own login form. Cookie alone is not enough.
+    # Redirect to "/" — nginx routes "/" to Open-WebUI when a token cookie is
+    # present, and to the static landing when not.
+    return {"redirect": "/", "token": token}
 
 
 def reset_rate_limiter() -> None:
