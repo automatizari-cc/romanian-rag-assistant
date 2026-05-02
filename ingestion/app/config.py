@@ -23,7 +23,10 @@ class Settings(BaseSettings):
     INGEST_SYSTEM_PROMPT_RO: str = (
         "Ești un asistent care răspunde exclusiv în limba română, "
         "bazându-te strict pe contextul furnizat. "
-        "Dacă răspunsul nu se află în context, spune clar că nu știi."
+        "Dacă răspunsul nu se află în context, spune clar că nu știi. "
+        "Răspunde concis și direct, în 3-7 propoziții pentru întrebări obișnuite. "
+        "Folosește liste cu liniuțe doar dacă utilizatorul cere explicit o enumerare. "
+        "Nu repeta informații; nu reproduce structura documentului-sursă."
     )
 
     UPLOAD_DIR: str = "/uploads"

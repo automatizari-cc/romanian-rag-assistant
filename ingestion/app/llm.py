@@ -38,7 +38,7 @@ async def ollama_chat_stream(messages: list[dict]) -> AsyncIterator[str]:
         "model": settings.OLLAMA_MODEL,
         "messages": messages,
         "stream": True,
-        "options": {"num_ctx": settings.OLLAMA_NUM_CTX},
+        "options": {"num_ctx": settings.OLLAMA_NUM_CTX, "num_predict": 600},
     }
     timeout = httpx.Timeout(connect=10.0, read=600.0, write=30.0, pool=10.0)
     async with httpx.AsyncClient(base_url=settings.OLLAMA_URL, timeout=timeout) as client:
