@@ -24,3 +24,11 @@ TEMPLATE """{{- if .System }}<|start_header_id|>system<|end_header_id|>
 PARAMETER stop "<|eot_id|>"
 PARAMETER stop "<|start_header_id|>"
 PARAMETER stop "<|end_header_id|>"
+
+# The mradermacher GGUF metadata bakes in `PARAMETER temperature 0` from
+# OpenLLM-Ro's upstream config (deterministic, set up for the Llama Guard
+# classifier). Inherited via FROM unless overridden — making chat output
+# bit-identical across runs and weirdly rigid. 0.5 is a balanced default
+# for factual RAG: enough variation to break determinism without losing
+# groundedness.
+PARAMETER temperature 0.5

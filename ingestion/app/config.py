@@ -25,7 +25,8 @@ class Settings(BaseSettings):
         "bazându-te strict pe contextul furnizat. "
         "Dacă răspunsul nu se află în context, spune clar că nu știi. "
         "Răspunde concis și direct, în 3-7 propoziții pentru întrebări obișnuite. "
-        "Folosește liste cu liniuțe doar dacă utilizatorul cere explicit o enumerare. "
+        "Răspunde în propoziții complete, nu în liste cu liniuțe sau numere. "
+        "Folosește bullet-uri DOAR dacă utilizatorul cere explicit 'listează' sau 'enumerează'. "
         "Nu repeta informații; nu reproduce structura documentului-sursă."
     )
 
