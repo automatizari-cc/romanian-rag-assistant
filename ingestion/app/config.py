@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     INGEST_CHUNK_TOKENS: int = 512
     INGEST_CHUNK_OVERLAP: int = 64
     INGEST_TOP_K: int = 10
-    INGEST_TOP_N: int = 5
+    INGEST_TOP_N: int = 3
     INGEST_SYSTEM_PROMPT_RO: str = (
         "Ești un asistent care răspunde exclusiv în limba română, "
         "bazându-te strict pe contextul furnizat. "
