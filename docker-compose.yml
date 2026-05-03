@@ -161,6 +161,7 @@ services:
       OPENAI_API_BASE_URL: ${OPENAI_API_BASE_URL}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       ENABLE_OLLAMA_API: "false"
+      BYPASS_MODEL_ACCESS_CONTROL: ${BYPASS_MODEL_ACCESS_CONTROL:-false}
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
     depends_on:
       postgres: {condition: service_healthy}
