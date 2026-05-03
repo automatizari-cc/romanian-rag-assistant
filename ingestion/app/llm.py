@@ -11,14 +11,14 @@ from .config import settings
 
 
 def build_context_block(hits: list[dict]) -> str:
-    parts: list[str] = []
-    for i, h in enumerate(hits, start=1):
-        p = h["payload"]
-        src = p.get("source", "necunoscut")
-        page = p.get("page")
-        loc = f"{src}#p{page}" if page else src
-        parts.append(f"[{i}] ({loc})\n{p.get('text', '').strip()}")
-    return "\n\n".join(parts)
+    # Source metadata (filename, page) is intentionally NOT exposed to the
+    # model — it tends to copy the header verbatim into answers (Q8/Q9 in
+    # the 2026-05-03 A/B). Citation [N] is enough; full source info stays
+    # server-side in the hits dict for logging/debug.
+    return "\n\n".join(
+        f"[{i}]\n{h['payload'].get('text', '').strip()}"
+        for i, h in enumerate(hits, start=1)
+    )
 
 
 def build_messages(user_msgs: list[dict], context: str) -> list[dict]:
