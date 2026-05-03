@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import json
 import logging
 import re
 import shutil
+import time
 import uuid
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
@@ -224,18 +226,46 @@ async def chat_completions(req: ChatCompletionRequest):
     if user_turn is None:
         raise HTTPException(status_code=400, detail="no user message")
 
-    hits = await retrieve(user_turn.content)
+    rid = uuid.uuid4().hex[:8]
+    t_req = time.perf_counter()
+    timings: dict[str, float] = {}
+
+    hits = await retrieve(user_turn.content, timings=timings)
     context = build_context_block(hits)
     messages = build_messages([m.model_dump() for m in req.messages], context)
 
     completion_id = new_completion_id()
     model_name = req.model or settings.OLLAMA_MODEL
 
+    log.info(
+        "chat rid=%s stage=retrieve embed_ms=%s search_ms=%s rerank_ms=%s hits=%d",
+        rid,
+        timings.get("embed_ms"),
+        timings.get("search_ms"),
+        timings.get("rerank_ms"),
+        len(hits),
+    )
+
     async def stream():
+        t_stream = time.perf_counter()
         async for line in ollama_chat_stream(messages):
             chunk = to_openai_chunk(line, completion_id, model_name)
             if chunk is not None:
+                if "ollama_first_token_ms" not in timings:
+                    timings["ollama_first_token_ms"] = round(
+                        (time.perf_counter() - t_stream) * 1000, 1
+                    )
                 yield chunk
+        timings["ollama_total_ms"] = round((time.perf_counter() - t_stream) * 1000, 1)
+        timings["total_ms"] = round((time.perf_counter() - t_req) * 1000, 1)
+        log.info(
+            "chat rid=%s stage=ollama first_token_ms=%s ollama_total_ms=%s total_ms=%s",
+            rid,
+            timings.get("ollama_first_token_ms"),
+            timings.get("ollama_total_ms"),
+            timings.get("total_ms"),
+        )
+        yield f": rag-timings={json.dumps({'rid': rid, **timings})}\n\n"
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(stream(), media_type="text/event-stream")
