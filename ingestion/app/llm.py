@@ -50,13 +50,70 @@ async def ollama_chat_stream(messages: list[dict]) -> AsyncIterator[str]:
                 yield line
 
 
+def format_sources(hits: list[dict]) -> str:
+    """Render the sources footer that gets streamed after the model's answer.
+
+    Each hit becomes one line `[N] filename` (or `[N] filename, p. M` for
+    PDFs with a meaningful page number). Numbering matches the [N] citations
+    we tell the model to use.
+    """
+    if not hits:
+        return ""
+    lines = ["", "", "**Surse:**"]
+    for i, h in enumerate(hits, start=1):
+        p = h.get("payload", {}) or {}
+        name = p.get("filename") or p.get("source") or "(necunoscut)"
+        if len(name) > 100:
+            name = name[:97] + "..."
+        page = p.get("page")
+        mime = p.get("mime") or ""
+        if mime == "application/pdf" and isinstance(page, int) and page > 1:
+            lines.append(f"[{i}] {name}, p. {page}")
+        else:
+            lines.append(f"[{i}] {name}")
+    return "\n".join(lines)
+
+
+def make_openai_content_chunk(content: str, completion_id: str, model: str) -> str:
+    """Synthesize an OpenAI-format SSE chunk carrying free-form delta content.
+
+    Used for the abstain response (no Ollama call) and for the sources footer
+    (post-stream). Mirrors the shape produced by to_openai_chunk so OWU and
+    OpenAI-compatible clients render it as part of the same message.
+    """
+    chunk = {
+        "id": completion_id,
+        "object": "chat.completion.chunk",
+        "created": int(time.time()),
+        "model": model,
+        "choices": [{"index": 0, "delta": {"content": content}, "finish_reason": None}],
+    }
+    return f"data: {json.dumps(chunk)}\n\n"
+
+
+def make_openai_finish_chunk(completion_id: str, model: str) -> str:
+    chunk = {
+        "id": completion_id,
+        "object": "chat.completion.chunk",
+        "created": int(time.time()),
+        "model": model,
+        "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}],
+    }
+    return f"data: {json.dumps(chunk)}\n\n"
+
+
 def to_openai_chunk(ollama_line: str, completion_id: str, model: str) -> str | None:
     try:
         evt = json.loads(ollama_line)
     except json.JSONDecodeError:
         return None
     delta_content = evt.get("message", {}).get("content", "")
-    finish = "stop" if evt.get("done") else None
+    done = bool(evt.get("done"))
+    # Caller owns the finish chunk so it can append a sources footer between
+    # the model's last token and the finish marker. Suppress Ollama's empty
+    # terminator and rely on make_openai_finish_chunk in the caller.
+    if done and not delta_content:
+        return None
     chunk = {
         "id": completion_id,
         "object": "chat.completion.chunk",
@@ -66,7 +123,7 @@ def to_openai_chunk(ollama_line: str, completion_id: str, model: str) -> str | N
             {
                 "index": 0,
                 "delta": {"content": delta_content} if delta_content else {},
-                "finish_reason": finish,
+                "finish_reason": None,
             }
         ],
     }

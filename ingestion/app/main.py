@@ -20,7 +20,16 @@ from .auth import router as auth_router
 from .chunking import chunk_text
 from .config import settings
 from .embed import embed_batch
-from .llm import build_context_block, build_messages, new_completion_id, ollama_chat_stream, to_openai_chunk
+from .llm import (
+    build_context_block,
+    build_messages,
+    format_sources,
+    make_openai_content_chunk,
+    make_openai_finish_chunk,
+    new_completion_id,
+    ollama_chat_stream,
+    to_openai_chunk,
+)
 from .parsers import parse
 from .retrieval import retrieve
 from .store import delete_document, ensure_collection, list_documents, upsert_chunks
@@ -312,20 +321,41 @@ async def chat_completions(req: ChatCompletionRequest):
     timings: dict[str, float] = {}
 
     hits = await retrieve(user_turn.content, timings=timings)
-    context = build_context_block(hits)
-    messages = build_messages([m.model_dump() for m in req.messages], context)
-
     completion_id = new_completion_id()
     model_name = req.model or settings.OLLAMA_MODEL
 
+    top_score = max((h.get("rerank_score", 0.0) for h in hits), default=0.0)
+    abstain = (not hits) or top_score < settings.INGEST_RELEVANCE_THRESHOLD
+
     log.info(
-        "chat rid=%s stage=retrieve embed_ms=%s search_ms=%s rerank_ms=%s hits=%d",
+        "chat rid=%s stage=retrieve embed_ms=%s search_ms=%s rerank_ms=%s hits=%d top_score=%.3f abstain=%s",
         rid,
         timings.get("embed_ms"),
         timings.get("search_ms"),
         timings.get("rerank_ms"),
         len(hits),
+        top_score,
+        abstain,
     )
+
+    if abstain:
+        async def abstain_stream():
+            yield make_openai_content_chunk(
+                settings.INGEST_ABSTAIN_MESSAGE_RO, completion_id, model_name,
+            )
+            yield make_openai_finish_chunk(completion_id, model_name)
+            timings["total_ms"] = round((time.perf_counter() - t_req) * 1000, 1)
+            log.info(
+                "chat rid=%s stage=abstain top_score=%.3f total_ms=%s",
+                rid, top_score, timings.get("total_ms"),
+            )
+            yield f": rag-timings={json.dumps({'rid': rid, **timings})}\n\n"
+            yield "data: [DONE]\n\n"
+        return StreamingResponse(abstain_stream(), media_type="text/event-stream")
+
+    context = build_context_block(hits)
+    messages = build_messages([m.model_dump() for m in req.messages], context)
+    sources_footer = format_sources(hits)
 
     async def stream():
         t_stream = time.perf_counter()
@@ -337,6 +367,9 @@ async def chat_completions(req: ChatCompletionRequest):
                         (time.perf_counter() - t_stream) * 1000, 1
                     )
                 yield chunk
+        if sources_footer:
+            yield make_openai_content_chunk(sources_footer, completion_id, model_name)
+        yield make_openai_finish_chunk(completion_id, model_name)
         timings["ollama_total_ms"] = round((time.perf_counter() - t_stream) * 1000, 1)
         timings["total_ms"] = round((time.perf_counter() - t_req) * 1000, 1)
         log.info(
