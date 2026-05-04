@@ -18,13 +18,12 @@ button[aria-label*="apel" i],
 button[aria-label*="call" i],
 button[aria-label*="cască" i],
 button[aria-label*="speaker" i],
+button[aria-label="More"],
 button[aria-label*="atașare" i],
 button[aria-label*="attach" i],
 button[aria-label*="încarc" i],
 button[aria-label*="upload" i],
 button[aria-label*="adăuga fișier" i],
-button[aria-label*="add file" i],
-button[aria-label*="more option" i],
-button[aria-label*="mai multe opțiuni" i] {
+button[aria-label*="add file" i] {
   display: none !important;
 }
