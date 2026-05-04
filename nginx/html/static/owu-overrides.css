@@ -70,19 +70,23 @@ button[aria-label*="add file" i] {
 }
 .rag-upload-link .rag-upload-icon { font-size: 1rem; line-height: 1; }
 
-/* JS (owu-upload-link.js) re-parents the link to flow as a sibling
- * immediately below OWU's chat input form. Override the fixed-corner
- * positioning so it lays out in the document instead. The class is
- * added by the JS only after a successful re-parent — until then the
- * fixed-corner styles above are the fallback. */
+/* JS (owu-upload-link.js) wraps the link in `.rag-upload-link-wrap` and
+ * inserts it as a sibling immediately after OWU's chat input form. The
+ * wrapper has flex-basis:100% so it forces a new line in OWU's flex-row
+ * parent — without it the link sits beside the form horizontally. */
+.rag-upload-link-wrap {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  flex-basis: 100%;
+  padding: 0.6rem 0.75rem 0.9rem;
+  box-sizing: border-box;
+}
 .rag-upload-link--inline {
   position: static !important;
   bottom: auto !important;
   right: auto !important;
   left: auto !important;
-  display: flex;
-  width: max-content;
-  margin: 0.5rem auto 1rem;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
 }
 .rag-upload-link--inline:hover,

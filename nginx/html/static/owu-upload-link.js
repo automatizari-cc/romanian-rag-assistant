@@ -24,12 +24,27 @@
     var link = document.querySelector(".rag-upload-link");
     if (!link) return false;
     var form = findChatForm();
-    if (!form) return false;
-    // Already in place — bail fast (this fires from MutationObserver a lot).
-    if (link.previousElementSibling === form && link.parentNode === form.parentNode) {
+    if (!form || !form.parentNode) return false;
+
+    // Wrap the link in a flex-basis:100% block so it forces a line break
+    // when the form's parent is a flex-row container (which it is in OWU).
+    // Without the wrapper the link sits beside the form horizontally.
+    var wrap = link.parentNode && link.parentNode.classList.contains("rag-upload-link-wrap")
+      ? link.parentNode
+      : null;
+
+    // Already in place — bail fast.
+    if (wrap && wrap.previousElementSibling === form && wrap.parentNode === form.parentNode) {
       return true;
     }
-    form.parentNode.insertBefore(link, form.nextSibling);
+
+    if (!wrap) {
+      wrap = document.createElement("div");
+      wrap.className = "rag-upload-link-wrap";
+      link.parentNode && link.parentNode.removeChild(link);
+      wrap.appendChild(link);
+    }
+    form.parentNode.insertBefore(wrap, form.nextSibling);
     link.classList.add("rag-upload-link--inline");
     return true;
   }
