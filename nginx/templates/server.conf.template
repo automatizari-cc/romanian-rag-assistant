@@ -95,6 +95,12 @@ server {
         proxy_set_header   X-Forwarded-Proto https;
         proxy_set_header   Upgrade           $safe_upgrade;
         proxy_set_header   Connection        $safe_connection;
+        # Disable upstream gzip so sub_filter sees raw HTML to inject our
+        # OWU UI overrides (hide mic/headphones/+ buttons we don't use).
+        proxy_set_header   Accept-Encoding   "";
+        sub_filter         "</head>" "<link rel=\"stylesheet\" href=\"/static/owu-overrides.css\"></head>";
+        sub_filter_once    on;
+        sub_filter_types   text/html;
         proxy_read_timeout 300s;
         proxy_send_timeout 300s;
     }
@@ -184,6 +190,12 @@ server {
         proxy_set_header   X-Forwarded-Proto https;
         proxy_set_header   Upgrade           $safe_upgrade;
         proxy_set_header   Connection        $safe_connection;
+        # Same OWU UI overrides as /__webui_root — covers SPA deep-links
+        # (e.g. /c/{chat_id} on a hard refresh).
+        proxy_set_header   Accept-Encoding   "";
+        sub_filter         "</head>" "<link rel=\"stylesheet\" href=\"/static/owu-overrides.css\"></head>";
+        sub_filter_once    on;
+        sub_filter_types   text/html;
         proxy_read_timeout 300s;
         proxy_send_timeout 300s;
     }

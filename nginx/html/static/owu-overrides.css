@@ -1,0 +1,30 @@
+/* Open-WebUI UI overrides, injected into every OWU page response by nginx.
+ *
+ * Hides chat-input buttons we don't use:
+ * - mic / Speech-to-Text
+ * - headphones / Text-to-Speech voice-mode call button
+ * - the "+" attach menu (OWU's native file upload bypasses our /kb pipeline,
+ *   which is the only correct ingestion path for this deployment).
+ *
+ * Selectors cover both English and Romanian aria-label strings (substring,
+ * case-insensitive) so the hide survives the user's UI language switch.
+ */
+
+button[aria-label*="vocal" i],
+button[aria-label*="voice" i],
+button[aria-label*="microfon" i],
+button[aria-label*="microphone" i],
+button[aria-label*="apel" i],
+button[aria-label*="call" i],
+button[aria-label*="cască" i],
+button[aria-label*="speaker" i],
+button[aria-label*="atașare" i],
+button[aria-label*="attach" i],
+button[aria-label*="încarc" i],
+button[aria-label*="upload" i],
+button[aria-label*="adăuga fișier" i],
+button[aria-label*="add file" i],
+button[aria-label*="more option" i],
+button[aria-label*="mai multe opțiuni" i] {
+  display: none !important;
+}
