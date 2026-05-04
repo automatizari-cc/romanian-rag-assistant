@@ -18,6 +18,17 @@ button[aria-label*="apel" i],
 button[aria-label*="call" i],
 button[aria-label*="cască" i],
 button[aria-label*="speaker" i],
+/* The + (attach) menu in OWU 0.5.4 is a button-inside-a-button:
+ *   <button data-melt-dropdown-menu-trigger>     ← outer click target
+ *     <div aria-label="Mai multe" / "More">       ← wrapper (i18n)
+ *       <button aria-label="More">                ← inner icon button
+ *         <svg>+</svg>
+ * Hiding only the inner button leaves the outer trigger as a tiny
+ * empty clickable strip. Need to hide the outer trigger too via :has(). */
+button:has(> div[aria-label="Mai multe"]),
+button:has(> div[aria-label="More"]),
+div[aria-label="Mai multe"],
+div[aria-label="More"],
 button[aria-label="More"],
 button[aria-label*="atașare" i],
 button[aria-label*="attach" i],
