@@ -70,15 +70,22 @@ button[aria-label*="add file" i] {
 }
 .rag-upload-link .rag-upload-icon { font-size: 1rem; line-height: 1; }
 
-/* On phones the chat input lives at bottom-right; move our shortcut to
- * bottom-left and shrink it so it sits clear of the send button. */
-@media (max-width: 640px) {
-  .rag-upload-link {
-    bottom: 0.75rem;
-    left: 0.75rem;
-    right: auto;
-    padding: 0.5rem 0.85rem;
-    font-size: 0.85rem;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
-  }
+/* JS (owu-upload-link.js) re-parents the link to flow as a sibling
+ * immediately below OWU's chat input form. Override the fixed-corner
+ * positioning so it lays out in the document instead. The class is
+ * added by the JS only after a successful re-parent — until then the
+ * fixed-corner styles above are the fallback. */
+.rag-upload-link--inline {
+  position: static !important;
+  bottom: auto !important;
+  right: auto !important;
+  left: auto !important;
+  display: flex;
+  width: max-content;
+  margin: 0.5rem auto 1rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+}
+.rag-upload-link--inline:hover,
+.rag-upload-link--inline:focus-visible {
+  transform: none;
 }
