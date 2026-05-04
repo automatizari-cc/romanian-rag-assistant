@@ -1,11 +1,7 @@
 /* Open-WebUI UI overrides, injected into every OWU page response by nginx.
  *
- * Hides chat-input buttons we don't use:
- * - mic / Speech-to-Text
- * - headphones / Text-to-Speech voice-mode call button
- * - the "+" attach menu (OWU's native file upload bypasses our /kb pipeline,
- *   which is the only correct ingestion path for this deployment).
- *
+ * Hides chat-input buttons we don't use (mic / headphones / + attach) and
+ * adds a fixed-position "Adaugă Documente" shortcut to the /upload page.
  * Selectors cover both English and Romanian aria-label strings (substring,
  * case-insensitive) so the hide survives the user's UI language switch.
  */
@@ -17,14 +13,16 @@ button[aria-label*="microphone" i],
 button[aria-label*="apel" i],
 button[aria-label*="call" i],
 button[aria-label*="cască" i],
-button[aria-label*="speaker" i],
+button[aria-label*="speaker" i] {
+  display: none !important;
+}
+
 /* The + (attach) menu in OWU 0.5.4 is a button-inside-a-button:
  *   <button data-melt-dropdown-menu-trigger>     ← outer click target
  *     <div aria-label="Mai multe" / "More">       ← wrapper (i18n)
  *       <button aria-label="More">                ← inner icon button
  *         <svg>+</svg>
- * Hiding only the inner button leaves the outer trigger as a tiny
- * empty clickable strip. Need to hide the outer trigger too via :has(). */
+ * Hide all three layers so the trigger area collapses entirely. */
 button:has(> div[aria-label="Mai multe"]),
 button:has(> div[aria-label="More"]),
 div[aria-label="Mai multe"],
@@ -39,57 +37,45 @@ button[aria-label*="add file" i] {
   display: none !important;
 }
 
-/* Floating shortcut to /upload — injected on every OWU page so users can
- * jump from chat to the KB management view. Bottom-right corner, pill
- * shape, dark/light theme neutral. */
+/* Floating shortcut to /upload — fixed top-right of the viewport, just
+ * left of OWU's user avatar. Stable position across empty-chat and
+ * active-chat states, no DOM-relocation needed, no emoji glyph that
+ * can flash as a missing-image icon during initial paint. */
 .rag-upload-link {
   position: fixed;
-  bottom: 1.5rem;
-  right: 1.5rem;
-  z-index: 100;
+  top: 0.7rem;
+  right: 4rem;
+  z-index: 1000;
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.55rem 1rem;
+  padding: 0.45rem 0.95rem;
   background: rgba(20, 24, 33, 0.92);
   color: #f5f7fb;
   border-radius: 999px;
   font-family: inherit;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   font-weight: 500;
   text-decoration: none;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
   transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
 }
 .rag-upload-link:hover,
 .rag-upload-link:focus-visible {
   background: #2f81f7;
-  box-shadow: 0 6px 16px rgba(47, 129, 247, 0.35);
+  box-shadow: 0 4px 12px rgba(47, 129, 247, 0.4);
   transform: translateY(-1px);
   outline: none;
 }
-.rag-upload-link .rag-upload-icon { font-size: 1rem; line-height: 1; }
+.rag-upload-link svg { flex: 0 0 auto; }
 
-/* JS (owu-upload-link.js) wraps the link in `.rag-upload-link-wrap` and
- * inserts it as a sibling immediately after OWU's chat input form. The
- * wrapper has flex-basis:100% so it forces a new line in OWU's flex-row
- * parent — without it the link sits beside the form horizontally. */
-.rag-upload-link-wrap {
-  display: flex;
-  justify-content: center;
-  width: 100%;
-  flex-basis: 100%;
-  padding: 0.6rem 0.75rem 0.9rem;
-  box-sizing: border-box;
-}
-.rag-upload-link--inline {
-  position: static !important;
-  bottom: auto !important;
-  right: auto !important;
-  left: auto !important;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
-}
-.rag-upload-link--inline:hover,
-.rag-upload-link--inline:focus-visible {
-  transform: none;
+/* On phones the avatar sits roughly at top-right of the viewport too;
+ * tighten margins so we still fit comfortably to the left of it. */
+@media (max-width: 640px) {
+  .rag-upload-link {
+    top: 0.65rem;
+    right: 3.5rem;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.82rem;
+  }
 }

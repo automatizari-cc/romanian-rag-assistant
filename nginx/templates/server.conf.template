@@ -99,8 +99,8 @@ server {
         # OWU UI overrides (hide mic/headphones/+ buttons we don't use,
         # plus a floating link from chat to /upload).
         proxy_set_header   Accept-Encoding   "";
-        sub_filter         "</head>" "<link rel=\"stylesheet\" href=\"/static/owu-overrides.css?v=4\"></head>";
-        sub_filter         "</body>" "<a class=\"rag-upload-link\" href=\"/upload\" title=\"Adaugă documente\"><span class=\"rag-upload-icon\" aria-hidden=\"true\">&#x1F4C4;</span>Adaugă Documente</a><script src=\"/static/owu-upload-link.js?v=4\" defer></script></body>";
+        sub_filter         "</head>" "<link rel=\"stylesheet\" href=\"/static/owu-overrides.css?v=5\"></head>";
+        sub_filter         "</body>" "<a class=\"rag-upload-link\" href=\"/upload\" title=\"Adaugă documente\"><svg viewBox=\"0 0 24 24\" width=\"15\" height=\"15\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z\"/><path d=\"M14 2v6h6\"/></svg>Adaugă Documente</a></body>";
         sub_filter_once    on;
         sub_filter_types   text/html;
         proxy_read_timeout 300s;
@@ -195,8 +195,8 @@ server {
         # Same OWU UI overrides as /__webui_root — covers SPA deep-links
         # (e.g. /c/{chat_id} on a hard refresh).
         proxy_set_header   Accept-Encoding   "";
-        sub_filter         "</head>" "<link rel=\"stylesheet\" href=\"/static/owu-overrides.css?v=4\"></head>";
-        sub_filter         "</body>" "<a class=\"rag-upload-link\" href=\"/upload\" title=\"Adaugă documente\"><span class=\"rag-upload-icon\" aria-hidden=\"true\">&#x1F4C4;</span>Adaugă Documente</a><script src=\"/static/owu-upload-link.js?v=4\" defer></script></body>";
+        sub_filter         "</head>" "<link rel=\"stylesheet\" href=\"/static/owu-overrides.css?v=5\"></head>";
+        sub_filter         "</body>" "<a class=\"rag-upload-link\" href=\"/upload\" title=\"Adaugă documente\"><svg viewBox=\"0 0 24 24\" width=\"15\" height=\"15\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z\"/><path d=\"M14 2v6h6\"/></svg>Adaugă Documente</a></body>";
         sub_filter_once    on;
         sub_filter_types   text/html;
         proxy_read_timeout 300s;
