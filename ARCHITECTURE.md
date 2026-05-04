@@ -187,7 +187,7 @@ Speed expectation: **~5–7 tok/s** generation, **single-user sequential**. Mult
 9. Run `scripts/sync-cloudflare-ips.sh` once, then schedule via cron (daily).
 10. Run `scripts/setup-fail2ban.sh`.
 11. Run `scripts/bootstrap.sh` — pulls RoLlama3.1 GGUF, creates Ollama Modelfile, pre-warms TEI models.
-12. `docker compose up -d`.
+12. `docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile prod up -d`.
 13. In Cloudflare dashboard: enable Full Strict, Always Use HTTPS, Authenticated Origin Pulls, Bot Fight Mode, Turnstile rule on `/auth/*`, Rate Limit rules on `/auth/*` and `/api/*`.
 14. Smoke test: ingest a sample doc, ask a Romanian question, verify citation and answer language.
 

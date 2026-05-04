@@ -68,7 +68,7 @@ cp .env.example .env && $EDITOR .env
 ./scripts/sync-cloudflare-ips.sh                 # also schedule via cron, daily
 ./scripts/setup-fail2ban.sh                      # SSH brute-force protection
 
-docker compose --profile prod up -d
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile prod up -d
 ./scripts/bootstrap.sh
 ```
 
