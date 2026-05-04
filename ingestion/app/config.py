@@ -21,9 +21,11 @@ class Settings(BaseSettings):
     INGEST_TOP_K: int = 10
     INGEST_TOP_N: int = 3
     # Min sigmoid rerank score required to invoke the LLM. Below this we
-    # return INGEST_ABSTAIN_MESSAGE_RO without calling Ollama. bge-reranker-v2-m3
-    # scores are in (0, 1); 0.3 is a reasonable "actually relevant" floor.
-    INGEST_RELEVANCE_THRESHOLD: float = 0.3
+    # return INGEST_ABSTAIN_MESSAGE_RO without calling Ollama. Tuned 2026-05-04
+    # against the wine corpus: off-topic-but-domain-adjacent queries (e.g.
+    # "Veuve Clicquot" against a Romanian-wine corpus) reranked at ~0.50;
+    # genuine on-topic queries reranked at ~0.70+. 0.55 splits cleanly.
+    INGEST_RELEVANCE_THRESHOLD: float = 0.55
     INGEST_ABSTAIN_MESSAGE_RO: str = (
         "Nu am găsit informații despre acest subiect în baza de cunoștințe."
     )
