@@ -69,3 +69,16 @@ button[aria-label*="add file" i] {
   outline: none;
 }
 .rag-upload-link .rag-upload-icon { font-size: 1rem; line-height: 1; }
+
+/* On phones the chat input lives at bottom-right; move our shortcut to
+ * bottom-left and shrink it so it sits clear of the send button. */
+@media (max-width: 640px) {
+  .rag-upload-link {
+    bottom: 0.75rem;
+    left: 0.75rem;
+    right: auto;
+    padding: 0.5rem 0.85rem;
+    font-size: 0.85rem;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+  }
+}

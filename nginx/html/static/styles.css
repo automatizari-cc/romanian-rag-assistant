@@ -237,3 +237,68 @@ input[aria-invalid="true"] {
   background: rgba(248,81,73,0.08);
   border-color: var(--error);
 }
+
+/* ─── mobile (≤640px) ─────────────────────────────────── */
+
+@media (max-width: 640px) {
+  body {
+    padding: 0.75rem;
+    /* Top-align — center-align breaks on tall content / soft-keyboard. */
+    justify-content: flex-start;
+    padding-top: 1rem;
+  }
+
+  .card {
+    padding: 1.25rem 1.1rem 1rem;
+    border-radius: 10px;
+  }
+
+  h1 { font-size: 1.35rem; }
+  .lede { font-size: 0.95rem; }
+
+  .section-title { margin-top: 1.25rem; font-size: 1rem; }
+
+  /* Stack URL row vertically; full-width submit. */
+  .url-row { flex-direction: column; gap: 0.5rem; }
+  .url-row .btn { width: 100%; padding-top: 0.75rem; padding-bottom: 0.75rem; }
+
+  /* Reflow the documents table as labeled stacked cards.
+   * Cells get `Mărime: 824 KB` style prefixes via data-label::before. */
+  .doc-table,
+  .doc-table tbody,
+  .doc-table tr,
+  .doc-table td { display: block; width: 100%; }
+  .doc-table thead { display: none; }
+  .doc-table tr {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 0.6rem;
+    padding: 0.7rem 0.85rem;
+  }
+  .doc-table td {
+    border-bottom: none;
+    padding: 0.18rem 0;
+  }
+  .doc-table td[data-label="Fișier"] {
+    font-weight: 500;
+    font-size: 1rem;
+    word-break: break-all;
+    margin-bottom: 0.25rem;
+  }
+  .doc-table td[data-label]:not([data-label=""]):not([data-label="Fișier"])::before {
+    content: attr(data-label) ": ";
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin-right: 0.35rem;
+  }
+  .doc-table td[data-label=""] { margin-top: 0.5rem; }
+
+  /* Larger touch target for delete (≥44px tall). */
+  .btn-danger {
+    width: 100%;
+    padding: 0.7rem 1rem;
+    font-size: 0.95rem;
+  }
+
+  .dropzone { padding: 1.5rem 0.75rem; }
+}

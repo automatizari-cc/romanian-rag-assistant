@@ -85,11 +85,12 @@
     var tbody = document.createElement("tbody");
     docs.forEach(function (d) {
       var tr = document.createElement("tr");
-      tr.appendChild(cell(d.filename || "—"));
-      tr.appendChild(cell(humanBytes(d.size_bytes)));
-      tr.appendChild(cell(String(d.chunk_count || 0)));
-      tr.appendChild(cell(fmtDate(d.uploaded_at)));
+      tr.appendChild(cell(d.filename || "—", "Fișier"));
+      tr.appendChild(cell(humanBytes(d.size_bytes), "Mărime"));
+      tr.appendChild(cell(String(d.chunk_count || 0), "Bucăți"));
+      tr.appendChild(cell(fmtDate(d.uploaded_at), "Încărcat"));
       var tdBtn = document.createElement("td");
+      tdBtn.setAttribute("data-label", "");
       var btn = document.createElement("button");
       btn.className = "btn btn-danger";
       btn.type = "button";
@@ -103,8 +104,9 @@
     listEl.appendChild(table);
   }
 
-  function cell(text) {
+  function cell(text, label) {
     var td = document.createElement("td");
+    if (label) td.setAttribute("data-label", label);
     td.textContent = text;
     return td;
   }
