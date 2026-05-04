@@ -96,9 +96,11 @@ server {
         proxy_set_header   Upgrade           $safe_upgrade;
         proxy_set_header   Connection        $safe_connection;
         # Disable upstream gzip so sub_filter sees raw HTML to inject our
-        # OWU UI overrides (hide mic/headphones/+ buttons we don't use).
+        # OWU UI overrides (hide mic/headphones/+ buttons we don't use,
+        # plus a floating link from chat to /upload).
         proxy_set_header   Accept-Encoding   "";
         sub_filter         "</head>" "<link rel=\"stylesheet\" href=\"/static/owu-overrides.css\"></head>";
+        sub_filter         "</body>" "<a class=\"rag-upload-link\" href=\"/upload\" title=\"Adaugă documente\"><span class=\"rag-upload-icon\" aria-hidden=\"true\">&#x1F4C4;</span>Adaugă Documente</a></body>";
         sub_filter_once    on;
         sub_filter_types   text/html;
         proxy_read_timeout 300s;
@@ -194,6 +196,7 @@ server {
         # (e.g. /c/{chat_id} on a hard refresh).
         proxy_set_header   Accept-Encoding   "";
         sub_filter         "</head>" "<link rel=\"stylesheet\" href=\"/static/owu-overrides.css\"></head>";
+        sub_filter         "</body>" "<a class=\"rag-upload-link\" href=\"/upload\" title=\"Adaugă documente\"><span class=\"rag-upload-icon\" aria-hidden=\"true\">&#x1F4C4;</span>Adaugă Documente</a></body>";
         sub_filter_once    on;
         sub_filter_types   text/html;
         proxy_read_timeout 300s;
