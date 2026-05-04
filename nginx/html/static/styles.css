@@ -104,7 +104,8 @@ label {
 }
 
 input[type="email"],
-input[type="password"] {
+input[type="password"],
+input[type="url"] {
   width: 100%;
   background: #0d1117;
   border: 1px solid var(--border);
@@ -186,6 +187,17 @@ input[aria-invalid="true"] {
 }
 
 .doc-list { margin-top: 0.5rem; }
+
+.url-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  align-items: stretch;
+}
+
+.url-row input[type="url"] { flex: 1; }
+.url-row .btn { flex: 0 0 auto; padding-left: 1.1rem; padding-right: 1.1rem; }
+.url-row.busy { opacity: 0.65; pointer-events: none; }
 
 .doc-table {
   width: 100%;

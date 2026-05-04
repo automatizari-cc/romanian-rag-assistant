@@ -6,17 +6,28 @@
   var MAX_BYTES = 25 * 1024 * 1024;
   var ALLOWED_EXT = ["pdf", "docx", "txt", "md", "markdown", "html", "htm"];
 
-  var dz       = document.getElementById("dropzone");
-  var fileIn   = document.getElementById("file");
-  var status   = document.getElementById("upload-status");
-  var listEl   = document.getElementById("doc-list");
-  var emptyEl  = document.getElementById("doc-empty");
+  var dz        = document.getElementById("dropzone");
+  var fileIn    = document.getElementById("file");
+  var status    = document.getElementById("upload-status");
+  var listEl    = document.getElementById("doc-list");
+  var emptyEl   = document.getElementById("doc-empty");
+  var urlForm   = document.getElementById("url-form");
+  var urlInput  = document.getElementById("url-input");
+  var urlBtn    = document.getElementById("url-submit");
+  var urlStatus = document.getElementById("url-status");
 
   function setStatus(msg, kind) {
     if (!msg) { status.hidden = true; status.textContent = ""; return; }
     status.hidden = false;
     status.textContent = msg;
     status.className = kind === "ok" ? "form-ok" : "form-error";
+  }
+
+  function setUrlStatus(msg, kind) {
+    if (!msg) { urlStatus.hidden = true; urlStatus.textContent = ""; return; }
+    urlStatus.hidden = false;
+    urlStatus.textContent = msg;
+    urlStatus.className = kind === "ok" ? "form-ok" : "form-error";
   }
 
   function humanBytes(n) {
@@ -166,6 +177,50 @@
     });
   }
 
+  // ─── URL ingest ────────────────────────────────────────────────────────────
+
+  function submitUrl(rawUrl) {
+    setUrlStatus(null);
+    var url = (rawUrl || "").trim();
+    if (!url) {
+      setUrlStatus("Introdu o adresă web.", "err");
+      return;
+    }
+    if (!/^https?:\/\//i.test(url)) {
+      setUrlStatus("Doar URL-uri http:// sau https:// sunt permise.", "err");
+      return;
+    }
+
+    urlForm.classList.add("busy");
+    urlBtn.disabled = true;
+    setUrlStatus("Se preia conținutul de la „" + url + "”…", "ok");
+
+    fetch("/kb/url", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ url: url }),
+    }).then(function (r) {
+      return r.json().then(function (body) { return { status: r.status, body: body }; })
+        .catch(function () { return { status: r.status, body: {} }; });
+    }).then(function (res) {
+      if (res.status === 401) { window.location.assign("/login"); return; }
+      if (res.status === 200) {
+        setUrlStatus("Adăugat: „" + (res.body.source || url) + "” (" + (res.body.chunks || 0) + " bucăți).", "ok");
+        urlInput.value = "";
+        refreshList();
+        return;
+      }
+      var msg = (res.body && res.body.detail) || "Adăugarea URL-ului a eșuat.";
+      setUrlStatus(msg, "err");
+    }).catch(function () {
+      setUrlStatus("Eroare de rețea la preluarea URL-ului.", "err");
+    }).finally(function () {
+      urlForm.classList.remove("busy");
+      urlBtn.disabled = false;
+    });
+  }
+
   // ─── Wire-up ───────────────────────────────────────────────────────────────
 
   dz.addEventListener("click", function () { fileIn.click(); });
@@ -191,6 +246,11 @@
   });
   fileIn.addEventListener("change", function () {
     if (fileIn.files && fileIn.files[0]) handleFile(fileIn.files[0]);
+  });
+
+  urlForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    submitUrl(urlInput.value);
   });
 
   refreshList();

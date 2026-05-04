@@ -24,6 +24,7 @@ from .llm import build_context_block, build_messages, new_completion_id, ollama_
 from .parsers import parse
 from .retrieval import retrieve
 from .store import delete_document, ensure_collection, list_documents, upsert_chunks
+from .url_fetch import EXT_FOR_CONTENT_TYPE, FetchError, fetch_url
 
 log = logging.getLogger("ingestion")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -188,6 +189,86 @@ async def kb_upload(
     return KbUploadResponse(
         doc_id=doc_id,
         filename=filename,
+        mime=mime,
+        chunks=upserted,
+        bytes=len(data),
+        uploaded_at=uploaded_at,
+    )
+
+
+class KbUrlRequest(BaseModel):
+    url: str = Field(min_length=1, max_length=2048)
+
+
+class KbUrlResponse(BaseModel):
+    doc_id: str
+    source: str
+    mime: str
+    chunks: int
+    bytes: int
+    uploaded_at: str
+
+
+@app.post("/kb/url", response_model=KbUrlResponse)
+async def kb_url(
+    payload: KbUrlRequest,
+    user: Annotated[dict, Depends(current_user)],
+) -> KbUrlResponse:
+    try:
+        ct, data = await fetch_url(payload.url, max_bytes=settings.MAX_USER_UPLOAD_BYTES)
+    except FetchError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    if not data:
+        raise HTTPException(status_code=400, detail="Pagina este goală.")
+
+    # Synthesize a filename hint from the upstream Content-Type so parse()
+    # picks the right branch even if magic.from_buffer disagrees.
+    parse_hint = "url-fetched" + EXT_FOR_CONTENT_TYPE.get(ct, "")
+    try:
+        mime, pages = parse(parse_hint, data)
+    except ValueError as e:
+        raise HTTPException(status_code=415, detail=str(e)) from e
+
+    doc_id = str(uuid.uuid4())
+    uploaded_at = datetime.now(UTC).isoformat()
+    uploader_id = str(user.get("id") or "unknown")
+    display_name = payload.url
+
+    archive_dir = Path(settings.UPLOAD_DIR) / doc_id
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    archive_name = "source" + EXT_FOR_CONTENT_TYPE.get(ct, ".bin")
+    (archive_dir / archive_name).write_bytes(data)
+
+    all_chunks: list[str] = []
+    payloads: list[dict] = []
+    for page_no, text in pages:
+        for c in chunk_text(text, settings.INGEST_CHUNK_TOKENS, settings.INGEST_CHUNK_OVERLAP):
+            all_chunks.append(c)
+            payloads.append({
+                "source": display_name,
+                "filename": display_name,
+                "page": page_no,
+                "text": c,
+                "doc_id": doc_id,
+                "uploaded_by": uploader_id,
+                "uploaded_at": uploaded_at,
+                "mime": mime,
+                "size_bytes": len(data),
+            })
+
+    if not all_chunks:
+        raise HTTPException(status_code=422, detail="no text extracted")
+
+    await ensure_collection()
+    vectors = await embed_batch(all_chunks)
+    upserted = await upsert_chunks(vectors, payloads)
+    log.info(
+        "kb url doc_id=%s by=%s mime=%s chunks=%d url=%s",
+        doc_id, uploader_id, mime, upserted, display_name[:120],
+    )
+    return KbUrlResponse(
+        doc_id=doc_id,
+        source=display_name,
         mime=mime,
         chunks=upserted,
         bytes=len(data),

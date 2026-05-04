@@ -20,6 +20,21 @@
 
     <p id="upload-status" class="form-error" hidden></p>
 
+    <h2 class="section-title">Sau adaugă o pagină web</h2>
+    <form id="url-form" class="url-row" autocomplete="off">
+      <input
+        id="url-input"
+        type="url"
+        name="url"
+        placeholder="https://example.ro/articol"
+        required
+        inputmode="url"
+        spellcheck="false"
+        aria-label="Adresa paginii web">
+      <button id="url-submit" class="btn btn-primary" type="submit">Adaugă</button>
+    </form>
+    <p id="url-status" class="form-error" hidden></p>
+
     <h2 class="section-title">Fișiere existente</h2>
     <div id="doc-list" class="doc-list" aria-live="polite">
       <p class="muted" id="doc-empty">Se încarcă…</p>
