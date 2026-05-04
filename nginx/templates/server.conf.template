@@ -122,8 +122,11 @@ server {
     location ^~ /static/ {
         try_files $uri =404;
         access_log off;
-        expires 1h;
-        add_header Cache-Control "public, max-age=3600" always;
+        # Revalidate on every load via ETag/Last-Modified. Browser still caches
+        # but issues If-None-Match and gets a 304 if unchanged. Avoids the
+        # "user runs old JS for an hour after a deploy" trap; cheap because
+        # static assets here are <10KB total.
+        add_header Cache-Control "no-cache" always;
     }
 
     # ─── Custom auth endpoint (FastAPI ingestion) ───────────────────────────
