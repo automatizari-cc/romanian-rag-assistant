@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Pull the LLM into Ollama and pre-warm TEI embedding/reranker caches.
+# Pull/build the LLM into Ollama and pre-warm TEI embedding/reranker caches.
 # Idempotent — safe to re-run.
 set -euo pipefail
 
@@ -11,10 +11,11 @@ cd "$(dirname "$0")/.."
 : "${EMBED_MODEL:?EMBED_MODEL not set}"
 : "${RERANK_MODEL:?RERANK_MODEL not set}"
 
-# RoLlama3.1 GGUF is hosted on HF — Ollama can pull directly via hf.co/ syntax.
-# If $OLLAMA_MODEL is a tag like rollama3.1:8b-instruct-q4_k_m we need a Modelfile.
-HF_GGUF_REPO="${HF_GGUF_REPO:-OpenLLM-Ro/RoLlama3.1-8b-Instruct-GGUF}"
-HF_GGUF_QUANT="${HF_GGUF_QUANT:-Q4_K_M}"
+# If MODELFILE is set, $OLLAMA_MODEL is built via `ollama create -f <file>`.
+# The Modelfile's FROM line pulls the base GGUF on first run, so no separate
+# pull step is needed. If MODELFILE is empty, $OLLAMA_MODEL must be a stock
+# registry tag and we fall back to `ollama pull`.
+MODELFILE="${MODELFILE:-}"
 
 echo "[bootstrap] waiting for ollama to be reachable…"
 until docker compose exec -T ollama ollama list >/dev/null 2>&1; do
@@ -23,10 +24,17 @@ done
 
 if docker compose exec -T ollama ollama list | awk '{print $1}' | grep -qx "$OLLAMA_MODEL"; then
   echo "[bootstrap] ollama already has $OLLAMA_MODEL"
+elif [[ -n "$MODELFILE" ]]; then
+  if [[ ! -f "$MODELFILE" ]]; then
+    echo "[bootstrap] MODELFILE=$MODELFILE not found on host" >&2
+    exit 1
+  fi
+  echo "[bootstrap] creating $OLLAMA_MODEL from $MODELFILE (pulls base GGUF on first run)"
+  docker compose cp "$MODELFILE" ollama:/tmp/bootstrap.Modelfile
+  docker compose exec -T ollama ollama create "$OLLAMA_MODEL" -f /tmp/bootstrap.Modelfile
 else
-  echo "[bootstrap] pulling $HF_GGUF_REPO:$HF_GGUF_QUANT into ollama as $OLLAMA_MODEL"
-  docker compose exec -T ollama ollama pull "hf.co/${HF_GGUF_REPO}:${HF_GGUF_QUANT}"
-  docker compose exec -T ollama ollama cp "hf.co/${HF_GGUF_REPO}:${HF_GGUF_QUANT}" "$OLLAMA_MODEL" || true
+  echo "[bootstrap] pulling $OLLAMA_MODEL"
+  docker compose exec -T ollama ollama pull "$OLLAMA_MODEL"
 fi
 
 echo "[bootstrap] warming tei-embed ($EMBED_MODEL)…"
