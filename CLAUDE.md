@@ -193,7 +193,33 @@ Repo Settings still TODO (manual UI work for the user):
 
 ## Open work — pickup points for next session
 
-> **🔔 Last session (2026-05-04) — surface these first thing next session:**
+> **🔔 Last session (2026-05-10) — cross-project initiative kicked off; surface these first:**
+>
+> **Multi-project pause/migration plan in progress** (joint with `automatizari-cc/docvault`):
+> - **docvault is being paused** + its domain `docvault.tech` becomes a static landing on CF Pages; runpod GPU pod is being freed for `marius.summitsec.cloud` GPU pivot. User authorization for cross-project SSH was given for THIS initiative only — see `memory/feedback_ssh_scope.md` (default rule still applies for unrelated work).
+> - **Phase A done** — docvault tagged `v0-paused` on `automatizari-cc/docvault@4c4e121`; pre-pause commit also patched `python-multipart` CVE.
+> - **Phase B done** — new public repo `automatizari-cc/docvault-site` (Cloudflare Pages + Pages Function for `/api/contact` using Resend HTTP API). Smoke-tested end-to-end; email lands at `keeper@docvault.tech`. Live `docvault.tech` still on Hostinger; cutover next session.
+> - **Phase C pending** — DNS cutover for `docvault.tech` → Pages, then `docker compose down` on Hostinger box (`srv1538474`, `root@72.60.113.19`, tailnet `100.94.251.2`) + `systemctl disable docker`. Box stays up (paid through 2027-03-28) — repurpose options being considered.
+> - **Phase D pending — directly affects this project** — GPU split-host pivot: Tailscale will be installed on CPX62 (locked-in decision), Ollama will run on Runpod GPU pod (`docvault-gpu`, tailnet `100.100.50.70`) exposed only on tailnet, no bearer auth needed because tailnet ACL is the security boundary. CPX62 keeps everything else; only `OLLAMA_URL` in `.env` flips to point at the pod. Runpod pod has a known privilege/userns issue blocking GPU access (`Failed to initialize NVML` despite kernel module 580.65.06 loaded and `/dev/nvidia3` present); user needs to Stop/Start the pod from Runpod dashboard before Phase D can start. Pod has Ollama already installed (`ollama` group on uid 999); Tailscale state persists across Stop/Start because volume is persistent.
+> - **Phase E pending** — re-run `/fewer-permission-prompts` after Phases C+D add new exact-match SSH patterns to settings.json.
+> - **Hostinger migration option** — separate consideration: AFTER Phase D stabilizes, possibly migrate marius from Hetzner CPX62 → Hostinger KVM 8 to drop Hetzner cost. Memory entry: `memory/project_hostinger_migration_option.md`. Not committed.
+>
+> **Infra inventory now on user's tailnet (relevant for Phase D):**
+> - `opt` (`100.72.150.99`) — local dev box, Debian/LMDE 6.1, Tailscale + wrangler ready, where Claude Code runs
+> - `docvault-gpu` (`100.100.50.70`) — Runpod GPU pod (NVIDIA driver loaded, GPU access currently broken pending pod restart)
+> - `srv1538474` (`100.94.251.2`) — Hostinger box, Tailscale SSH (browser-auth) — to be paused after Phase C
+> - **CPX62 (`46.224.118.59`) is NOT yet on tailnet** — Phase D will install Tailscale on it
+> - `exp03226` — user's Windows laptop, also on tailnet
+>
+> **Tooling state after this session:**
+> - Node downgraded from 24 → 22 LTS on `opt` (wrangler 4.90 has a header-format bug under Node 24).
+> - `wrangler` 4.90 installed globally; uses `CLOUDFLARE_API_TOKEN` env var (not OAuth — wrangler v4 dropped v1-style file format).
+> - Token stored at `~/.cf-token` (mode 0600); `~/.bashrc` exports `CLOUDFLARE_API_TOKEN=$(cat ~/.cf-token 2>/dev/null)` for new shells.
+> - API token scopes: `Cloudflare Pages: Edit`, `Account Settings: Read`, `Workers Scripts: Edit`, `Turnstile: Edit`. Add `Zone: DNS: Edit` before Phase C if doing DNS via API instead of CF dashboard.
+>
+> **One residual hygiene item — final Turnstile rotation:** The CF Turnstile API leaks the widget's secret value in every response (rotate endpoint included). Current valid Turnstile secret was rotated 2026-05-10 evening but is in this conversation's history because of that leak. To produce a value nobody in chat has seen, after Phase C: do a dashboard-side rotation (CF dashboard → Turnstile → `docvault-landing` → Rotate Secret), then `wrangler pages secret put TURNSTILE_SECRET` with the new value.
+
+> **🔔 Prior session (2026-05-04) — surface these first thing next session:**
 >
 > **Big wins shipped, all smoke-tested in prod on `marius.summitsec.cloud`:**
 > - **URL ingestion** — `POST /kb/url` with full SSRF guard (`0bd1181`). UI form on `/upload` next to the file dropzone. 21 tests. Smoke-tested with `https://example.com/` and `https://ro.wikipedia.org/wiki/Vin_rom%C3%A2nesc`; private-IP / file:// / localhost-by-name probes all return 400.
