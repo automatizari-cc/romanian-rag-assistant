@@ -158,7 +158,8 @@
       credentials: "same-origin",
       body: fd,
     }).then(function (r) {
-      return r.json().then(function (body) { return { status: r.status, body: body }; });
+      return r.json().then(function (body) { return { status: r.status, body: body }; })
+        .catch(function () { return { status: r.status, body: {} }; });
     }).then(function (res) {
       if (res.status === 401) { window.location.assign("/login"); return; }
       if (res.status === 200) {
@@ -166,7 +167,7 @@
         refreshList();
         return;
       }
-      var msg = (res.body && res.body.detail) || "Încărcare eșuată.";
+      var msg = (res.body && res.body.detail) || ("Încărcare eșuată (HTTP " + res.status + ").");
       if (res.status === 413) msg = "Fișier prea mare. Maxim 25 MB.";
       if (res.status === 415) msg = "Tip de fișier nepermis.";
       if (res.status === 422) msg = "Nu s-a putut extrage text din fișier.";
@@ -213,7 +214,7 @@
         refreshList();
         return;
       }
-      var msg = (res.body && res.body.detail) || "Adăugarea URL-ului a eșuat.";
+      var msg = (res.body && res.body.detail) || ("Adăugarea URL-ului a eșuat (HTTP " + res.status + ").");
       setUrlStatus(msg, "err");
     }).catch(function () {
       setUrlStatus("Eroare de rețea la preluarea URL-ului.", "err");
