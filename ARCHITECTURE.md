@@ -199,3 +199,72 @@ Speed expectation: **~5–7 tok/s** generation, **single-user sequential**. Mult
 - Multi-tenant isolation.
 - Outbound email — deferred; will use a transactional provider (Resend / Postmark / SES) when added, never self-hosted SMTP.
 - Backup/DR — needs a separate doc once corpus stabilizes.
+
+---
+
+## 9. Fresh redeploy from cold (post-CPX62 decom)
+
+After the Hetzner CPX62 decommission on 2026-05-17, the stack lives only as
+code in this repo + a data backup in private repo `automatizari-cc/marius-rag-backup`
+(see that repo's README for backup contents and what's in each tarball).
+
+To stand the stack back up on different infra:
+
+1. **Provision a fresh Linux box.** AVX2 is required for stock TEI; pre-Haswell
+   CPUs (e.g. Westmere) cannot run the TEI cpu image. 32 GB RAM minimum on CPU-only.
+2. **Run host hardening:** `scripts/harden-host.sh`, set up LUKS on `/data` if
+   desired (`scripts/setup-luks-data.sh`).
+3. **Clone both repos** — this one into `/opt/rag`, and `marius-rag-backup`
+   separately (you need the data tarballs from it).
+4. **Restore `.env`:** copy `marius-rag-backup/env-<date>.env` → `/opt/rag/.env`.
+   Update `DOMAIN`, `LE_EMAIL` for the new deployment. Consider rotating
+   `WEBUI_SECRET_KEY` (JWT signer) and `POSTGRES_PASSWORD` (whose hashes are in
+   the postgres dump — keep the same password or wipe+recreate the DB).
+5. **Pick a compose overlay based on the target host:**
+   - **AMD CPU host:** `-f docker-compose.yml -f docker-compose.prod.yml --profile prod`
+     (routes rerank through `tei-shim/` because bge-reranker-v2-m3 has no ONNX
+     export and stock TEI's Intel MKL path segfaults on AMD CPUs).
+   - **Intel CPU host with AVX2:** `-f docker-compose.yml --profile prod` alone
+     is enough; stock TEI handles both embed and rerank.
+   - **GPU host:** swap TEI images `cpu-1.7` → `cuda-1.7` in compose; drop
+     `tei-shim/` + `docker-compose.prod.yml`; add `runtime: nvidia` to the
+     `ollama` service. Quant can relax Q4_K_M → Q8_0/FP16 on GPU.
+6. **Build the Ollama image:** `scripts/bootstrap.sh` (drives
+   `ollama create rollama3.1:Q4_K_M -f ./ollama/Modelfile.rollama3.1`). The
+   Modelfile overrides the Llama-Guard-3 chat template that's baked into the
+   mradermacher GGUF — don't skip it.
+7. **Start postgres first**, wait healthy, restore dump:
+   ```
+   docker compose ... up -d postgres
+   gunzip -c marius-rag-backup/postgres-openwebui-<date>.sql.gz \
+     | docker exec -i romanian-rag-postgres-1 psql -U openwebui -d openwebui
+   ```
+8. **Start qdrant**, wait healthy, restore snapshot:
+   ```
+   docker compose ... up -d qdrant
+   curl -X POST http://127.0.0.1:6333/collections/docs/snapshots/upload \
+     -H 'Content-Type: multipart/form-data' \
+     -F 'snapshot=@marius-rag-backup/qdrant-docs-<date>.snapshot'
+   ```
+9. **Restore uploaded originals** into the `romanian-rag_uploads` docker volume
+   (path varies by docker root — on CPX62 it was `/data/docker/volumes/romanian-rag_uploads/_data/`):
+   ```
+   VOL=$(docker volume inspect romanian-rag_uploads --format '{{.Mountpoint}}')
+   sudo tar -xzf marius-rag-backup/uploads-<date>.tar.gz -C "$VOL"
+   ```
+10. **Bring up the rest:** `docker compose ... up -d`.
+11. **Re-issue TLS cert** if the domain changed: `sudo bash scripts/issue-cert.sh`.
+    The cert in the backup (if included) is bound to `marius.summitsec.cloud` and
+    expires 2026-07-28 — only usable if redeploying within that window on the
+    same domain.
+12. **Cloudflare:** re-create DNS A record, enable Authenticated Origin Pulls,
+    re-add Rate Limit rule on `/auth/*`, re-add WAF Managed Challenge on
+    `/login`, generate a fresh Turnstile widget if used. The CF API token in the
+    backup is scoped `Zone:DNS:Edit` on `summitsec.cloud` and is preserved
+    intentionally for this purpose. See `marius-rag-backup/cloudflare-config-checklist.md`.
+13. **Smoke test:** POST a known wine-corpus question to `/v1/chat/completions`,
+    verify a `Surse:` footer + reasonable Romanian answer.
+
+If the Qdrant snapshot ever fails to restore cleanly, the original uploaded
+source files (PDFs, HTML) are preserved in `uploads-<date>.tar.gz` and can be
+re-ingested via the `/upload` UI on the new deployment.
