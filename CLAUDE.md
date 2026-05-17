@@ -1,5 +1,9 @@
 # CLAUDE.md
 
+> **🪦 STATUS (2026-05-17): DECOMMISSIONED.** Live deployment on Hetzner CPX62 (`marius.summitsec.cloud`) was powered down on 2026-05-17. Stack now lives only as code in this repo + a data backup in private repo [`automatizari-cc/marius-rag-backup`](https://github.com/automatizari-cc/marius-rag-backup) (Qdrant snapshot + Postgres dump + uploaded originals + `.env`). To redeploy on different infra, see [ARCHITECTURE.md §9 "Fresh redeploy from cold"](ARCHITECTURE.md#9-fresh-redeploy-from-cold-post-cpx62-decom). Everything below this block is **historical record of the live deployment** — preserved as session-resumption context for any future revival.
+>
+> Decom trigger: Runpod GPU pivot abandoned 2026-05-13 after the CUDA-13.0-host incident stranded the savings plan (refund to Visa pending). User winding down to Hostinger as only paid server.
+
 Working notes for future sessions on **automatizari-cc/romanian-rag-assistant**. Read this first; defer to `ARCHITECTURE.md` for detailed design and `README.md` for runbook.
 
 ---
