@@ -198,7 +198,20 @@ Repo Settings still TODO (manual UI work for the user):
 
 ## Open work — pickup points for next session
 
-> **🔔 Last session (2026-05-17) — Runpod GPU pivot dead, refund in progress; CPU-only is the foreseeable reality:**
+> **🔔 Last session (2026-05-17) — CPX62 DECOMMISSIONED; stack now in cold storage.**
+>
+> See the status banner at the very top of this file for the headline. This callout is the detailed record of how we got here.
+>
+> **Decom landed this session (after the Runpod-Phase-D-dead trigger):**
+> - Hetzner CPX62 powered off + server deleted + Cloud Firewall deleted (Hetzner dashboard).
+> - `marius.summitsec.cloud` CF DNS A record deleted (record id `5a7d34df9c64470c62c99ba85d9f0a44`, was → 46.224.118.59 proxied).
+> - `marius-cpx62` removed from Tailscale admin UI.
+> - Backup pushed to private repo [`automatizari-cc/marius-rag-backup`](https://github.com/automatizari-cc/marius-rag-backup) (commit `b9f05c7`, 11 MB total). Local mirror at `/home/al/marius-rag-backup-20260517/` on `opt`.
+> - Backup contents verified-restorable end-to-end against ephemeral postgres + qdrant containers — row counts and collection state matched source exactly.
+> - CF API token (`Zone:DNS:Edit` on `summitsec.cloud`) PRESERVED in the backup `.env` per user decision (memory `project_cf_api_token_preserved.md`).
+> - ARCHITECTURE.md §9 "Fresh redeploy from cold" added as the redeploy runbook.
+>
+> **Decom trigger:** Runpod GPU pivot abandoned 2026-05-13. Refund of ~$345 to Visa (last 4 8992) still in Runpod's escalation queue as of decom — orthogonal, will settle on its own. CUDA-13.0-host incompatibility stranded the savings plan; the SKU went Unavailable in EU-RO-1 after the support-instructed terminate. User decided to wind down to Hostinger as the only paid server going forward.
 >
 > **Phase D (GPU on Runpod) is dead.** Sequence on ticket #38576 (2026-05-10 → 2026-05-13):
 > - Runpod confirmed root cause: pod scheduled on a CUDA 13.0 host while the image is `runpod/pytorch:2.4.0-py3.11-cuda12.4.1` — known incompatibility. Their fix: terminate, redeploy under CUDA 12.4 filter.
@@ -222,14 +235,18 @@ Repo Settings still TODO (manual UI work for the user):
 > - ~~Rotate Tailscale authkey before Jul 15, 2026~~ — moot, pod terminated.
 > - ~~Phase D~~ — dead on Runpod. Future GPU evaluation (different provider, Hetzner GPU Cloud, etc.) deferred pending a fresh decision.
 >
-> **Still open, decoupled from GPU question:**
-> - **Hostinger docvault teardown** — `srv1538474` containers + docker daemon still running, DNS-isolated. Can be done any time.
-> - **`/upload` "Eroare de rețea"** error mapping — cheap UX fix.
-> - **Cert auto-renewal systemd timer** — cert expires 2026-07-28.
-> - **Phase E** (`/fewer-permission-prompts`) — has new exact-match SSH patterns to add.
+> **Still open (post-decom):**
+> - **Hostinger docvault teardown** — `srv1538474` (`100.94.251.2`, paid through 2027-03-28) still has 6 docvault containers idling, DNS-isolated. Original "warm fallback for Phase D" purpose is moot now. Pending: `ssh root@100.94.251.2 'cd /home/al/docvault && docker compose down && systemctl disable docker'`. User explicitly deferred this past today's session.
+> - **Runpod refund to Visa 8992** — still in Runpod's escalation queue. Settles on its own.
+> - **Network volume `xeric_yellow_baboon`** (50 GB, EU-RO-1) — delete in Runpod dashboard after refund clears.
 >
-> **Closed since the 2026-05-04 callout:**
+> **Closed:**
+> - ~~CPX62 decom~~ — DONE this session.
 > - ~~OWU broken-image flash~~ — root-caused + fixed in `f4fcfee` (2026-05-11). Was OWU referencing `/static/favicon.png` which our nginx 404'd; UA broken-image vector glyph painted for one frame. `96ffe3c`'s `font-size: 0` workaround couldn't suppress it because the glyph isn't text/alt.
+> - ~~`/upload` "Eroare de rețea" error mapping~~ — fixed in `dbbe4df` (between the 2026-05-04 callout and the decom).
+> - ~~Cert auto-renewal systemd timer~~ — moot; CPX62 gone.
+> - ~~Phase E `/fewer-permission-prompts` for this repo~~ — moot; marius-cpx62 and docvault-gpu SSH targets no longer exist.
+> - ~~All CPU latency-reduction work~~ — moot without a live deployment. If reviving, see ARCHITECTURE.md §9 + the open levers documented in the 2026-05-03 same-day follow-on callout below.
 
 > **🔔 Prior session (2026-05-10) — cross-project initiative kicked off; surface these first:**
 >
